@@ -1,6 +1,8 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
+import type { BlobReference } from "@blobscan/blob-storage-manager";
+
 import { paginatedProcedure } from "../middlewares/withPagination";
 import { blobSelect, blobsOnTransactionsSelect } from "../queries/blob";
 import { createTRPCRouter, publicProcedure } from "../trpc";
@@ -42,20 +44,33 @@ export const blobRouter = createTRPCRouter({
       }
 
       const { blob, blobHash, transaction } = blobOnTransaction;
-      const blobReferences: Parameters<typeof blobStorageManager.getBlob> = [
-        { storage: "google", reference: blob.gsUri },
-      ];
+      const blobReferences = blob.dataStorageReferences.map<BlobReference>(
+        ({ blobStorage, dataReference }) => ({
+          storage: blobStorage,
+          reference: dataReference,
+        })
+      );
 
-      if (blob.swarmHash) {
-        blobReferences.push({ storage: "swarm", reference: blob.swarmHash });
+      let blobData: Awaited<ReturnType<typeof blobStorageManager.getBlob>>;
+
+      try {
+        blobData = await blobStorageManager.getBlob(...blobReferences);
+      } catch (err) {
+        const err_ = err as Error;
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: err_.message,
+          cause: err_,
+        });
       }
 
-      const blobData = await blobStorageManager.getBlob(...blobReferences);
-
       if (!blobData) {
+        const uris = blobReferences
+          .map(({ reference, storage }) => `${storage}:${reference}`)
+          .join(", ");
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: `No blob data with gs uri ${blob.gsUri} or swarm hash ${blob.swarmHash}`,
+          message: `No blob data found on the following storage URIs: ${uris}`,
         });
       }
 
@@ -68,7 +83,6 @@ export const blobRouter = createTRPCRouter({
         commitment: blob.commitment,
         data: blobData.data.toString(),
         size: blob.size,
-        swarmHash: blob.swarmHash,
       };
     }),
 });

@@ -1,11 +1,16 @@
-import type { Address, Blob, Transaction } from "@prisma/client";
+import type {
+  Address,
+  Blob,
+  BlobDataStorageReference,
+  Transaction,
+} from "@prisma/client";
 import { Prisma } from "@prisma/client";
 
 import type { OmittableFields } from "../types";
 
 const NOW_SQL = Prisma.sql`NOW()`;
 
-type RawBlob = {
+export type RawBlob = {
   versionedHash: string;
   commitment: string;
   txHash: string;
@@ -96,8 +101,10 @@ export const baseExtension = Prisma.defineExtension((prisma) =>
         },
       },
       blob: {
-        async filterNewBlobs(blobs: RawBlob[]) {
-          const existingBlobVersionedHashes = (
+        async filterNewBlobs(
+          blobs: RawBlob[]
+        ): Promise<Omit<RawBlob, "index">[]> {
+          const dbBlobVersionedHashes = (
             await prisma.blob.findMany({
               select: { versionedHash: true },
               where: {
@@ -105,30 +112,31 @@ export const baseExtension = Prisma.defineExtension((prisma) =>
               },
             })
           ).map((b) => b.versionedHash);
+          // Remove duplicates and blobs that already exist in the DB
+          const newBlobVersionedHashes = Array.from(
+            new Set(blobs.map((b) => b.versionedHash))
+          ).filter((hash) => !dbBlobVersionedHashes.includes(hash));
 
-          return blobs.filter(
-            (b) => !existingBlobVersionedHashes.includes(b.versionedHash)
-          );
+          return newBlobVersionedHashes.map((versionedHash) => {
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+            const b = blobs.find((b) => b.versionedHash === versionedHash)!;
+
+            return {
+              commitment: b.commitment,
+              data: b.data,
+              txHash: b.txHash,
+              versionedHash: b.versionedHash,
+            };
+          });
         },
         upsertMany(blobs: Omit<Blob, OmittableFields>[]) {
           const formattedValues = blobs
-            .map(
-              ({
-                versionedHash,
-                commitment,
-                gsUri,
-                size,
-                swarmHash,
-                firstBlockNumber,
-              }) => [
-                versionedHash,
-                commitment,
-                size,
-                gsUri,
-                swarmHash,
-                firstBlockNumber,
-              ]
-            )
+            .map(({ versionedHash, commitment, size, firstBlockNumber }) => [
+              versionedHash,
+              commitment,
+              size,
+              firstBlockNumber,
+            ])
             .map(
               (rowColumns) =>
                 Prisma.sql`(${Prisma.join(rowColumns)}, ${NOW_SQL}, ${NOW_SQL})`
@@ -139,8 +147,6 @@ export const baseExtension = Prisma.defineExtension((prisma) =>
               "versionedHash",
               "commitment",
               "size",
-              "gsUri",
-              "swarmHash",
               "firstBlockNumber",
               "insertedAt",
               "updatedAt"
@@ -148,10 +154,31 @@ export const baseExtension = Prisma.defineExtension((prisma) =>
             ON CONFLICT ("versionedHash") DO UPDATE SET
               "commitment" = EXCLUDED."commitment",
               "size" = EXCLUDED."size",
-              "gsUri" = EXCLUDED."gsUri",
-              "swarmHash" = EXCLUDED."swarmHash",
               "firstBlockNumber" = LEAST(blob."firstBlockNumber", EXCLUDED."firstBlockNumber"),
               "updatedAt" = NOW()
+          `;
+        },
+      },
+      blobDataStorageReference: {
+        upsertMany(refs: BlobDataStorageReference[]) {
+          const formattedValues = refs.map(
+            ({ blobHash, blobStorage, dataReference }) =>
+              Prisma.sql`(${Prisma.join([
+                blobHash,
+                Prisma.sql`${blobStorage.toLowerCase()}::"BlobStorage"`,
+                dataReference,
+              ])})`
+          );
+
+          return prisma.$executeRaw`
+            INSERT INTO "BlobDataStorageReference" (
+              "blobHash",
+              "blobStorage",
+              "dataReference"
+            )
+            VALUES ${Prisma.join(formattedValues)}
+            ON CONFLICT ("blobHash", "blobStorage") DO UPDATE SET
+              "dataReference" = EXCLUDED."dataReference"
           `;
         },
       },

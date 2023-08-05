@@ -1,7 +1,6 @@
-import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
-import type { Blob, Transaction, OmittableFields } from "@blobscan/db";
+import type { Blob, Transaction, OmittableFields, Block } from "@blobscan/db";
 
 import { jwtAuthedProcedure } from "../middlewares/isJWTAuthed";
 import { createTRPCRouter, publicProcedure } from "../trpc";
@@ -100,80 +99,95 @@ export const indexerRouter = createTRPCRouter({
 
       const newBlobs = await prisma.blob.filterNewBlobs(input.blobs);
 
-      let uploadedBlobs: Omit<Blob, OmittableFields>[] = [];
-      try {
-        const uploadBlobsPromises = newBlobs.map<
-          Promise<Omit<Blob, OmittableFields>>
-        >(async (b) => {
-          const blobReferences = await blobStorageManager.storeBlob(b);
+      const blobUploadResults = (
+        await Promise.all(
+          newBlobs.map(async (b) =>
+            blobStorageManager.storeBlob(b).then<{
+              uploadRes: Awaited<
+                ReturnType<typeof blobStorageManager.storeBlob>
+              >;
+              blob: Awaited<
+                ReturnType<typeof prisma.blob.filterNewBlobs>
+              >[number];
+            }>((uploadRes) => ({
+              blob: b,
+              uploadRes,
+            }))
+          )
+        )
+      ).flat();
 
-          if (!blobReferences.google) {
-            throw new TRPCError({
-              code: "INTERNAL_SERVER_ERROR",
-              message: `Failed to upload blob to Google Cloud Storage`,
-            });
-          }
+      blobUploadResults.forEach(({ uploadRes: { errors }, blob }) => {
+        if (errors.length) {
+          const errorMsgs = errors.map((e) => `${e.storage}: ${e.error}`);
 
-          return {
-            versionedHash: b.versionedHash,
-            commitment: b.commitment,
-            gsUri: blobReferences.google,
-            swarmHash: blobReferences?.swarm ?? null,
-            size: calculateBlobSize(b.data),
-            firstBlockNumber: input.block.number,
-          };
-        });
+          console.warn(
+            `Couldn't upload blob ${
+              blob.versionedHash
+            } to some of the storages: ${errorMsgs.join(", ")}`
+          );
+        }
+      });
 
-        uploadedBlobs = await Promise.all(uploadBlobsPromises);
-      } catch (err_) {
-        const err = err_ as Error;
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: `Failed to upload blobs to storages: ${err.message}`,
-        });
-      }
+      const dbBlobStorageRefs = blobUploadResults.flatMap(
+        ({ uploadRes: { references }, blob }) =>
+          references.map((ref) => ({
+            blobHash: blob.versionedHash,
+            blobStorage: ref.storage,
+            dataReference: ref.reference,
+          }))
+      );
 
       // 2. Prepare address, block, transaction and blob insertions
-      const blockData = {
+
+      // TODO: Create an upsert extension that set the `insertedAt` and the `updatedAt` field
+      const now = new Date();
+
+      const dbBlock: Omit<Block, OmittableFields> = {
         number: input.block.number,
         hash: input.block.hash,
         timestamp,
         slot: input.block.slot,
       };
-      const now = new Date();
+      const dbTxs = input.transactions.map<Omit<Transaction, OmittableFields>>(
+        (tx) => ({
+          blockNumber: tx.blockNumber,
+          hash: tx.hash,
+          fromId: tx.from,
+          toId: tx.to ?? null,
+        })
+      );
+      const dbBlobs = input.blobs.map<Omit<Blob, OmittableFields>>((blob) => ({
+        versionedHash: blob.versionedHash,
+        commitment: blob.commitment,
+        size: calculateBlobSize(blob.data),
+        firstBlockNumber: input.block.number,
+      }));
 
       operations.push(
         prisma.block.upsert({
           where: { hash: input.block.hash },
           create: {
-            ...blockData,
+            ...dbBlock,
             insertedAt: now,
             updatedAt: now,
           },
           update: {
-            ...blockData,
+            ...dbBlock,
             updatedAt: now,
           },
         })
       );
-
       operations.push(
         prisma.address.upsertAddressesFromTransactions(input.transactions)
       );
+      operations.push(prisma.transaction.upsertMany(dbTxs));
+      operations.push(prisma.blob.upsertMany(dbBlobs));
 
-      operations.push(
-        prisma.transaction.upsertMany(
-          input.transactions.map<Omit<Transaction, OmittableFields>>((tx) => ({
-            blockNumber: tx.blockNumber,
-            hash: tx.hash,
-            fromId: tx.from,
-            toId: tx.to ?? null,
-          }))
-        )
-      );
-
-      if (uploadedBlobs.length > 0) {
-        operations.push(prisma.blob.upsertMany(uploadedBlobs));
+      if (dbBlobStorageRefs.length) {
+        operations.push(
+          prisma.blobDataStorageReference.upsertMany(dbBlobStorageRefs)
+        );
       }
 
       operations.push(
