@@ -1,0 +1,133 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Blob router > should get a blob by versioned hash 1`] = `
+{
+  "blobs": [
+    {
+      "commitment": "commitment001",
+      "size": 1000,
+      "versionedHash": "blobHash001",
+    },
+    {
+      "commitment": "commitment002",
+      "size": 1100,
+      "versionedHash": "blobHash002",
+    },
+    {
+      "commitment": "commitment003",
+      "size": 1200,
+      "versionedHash": "blobHash003",
+    },
+    {
+      "commitment": "commitment004",
+      "size": 1300,
+      "versionedHash": "blobHash004",
+    },
+    {
+      "commitment": "commitment005",
+      "size": 1400,
+      "versionedHash": "blobHash005",
+    },
+    {
+      "commitment": "commitment006",
+      "size": 1500,
+      "versionedHash": "blobHash006",
+    },
+  ],
+  "totalBlobs": 0,
+}
+`;
+
+exports[`Blob router > should get all the blobs 1`] = `
+{
+  "blobs": [
+    {
+      "commitment": "commitment001",
+      "size": 1000,
+      "versionedHash": "blobHash001",
+    },
+    {
+      "commitment": "commitment002",
+      "size": 1100,
+      "versionedHash": "blobHash002",
+    },
+    {
+      "commitment": "commitment003",
+      "size": 1200,
+      "versionedHash": "blobHash003",
+    },
+    {
+      "commitment": "commitment004",
+      "size": 1300,
+      "versionedHash": "blobHash004",
+    },
+    {
+      "commitment": "commitment005",
+      "size": 1400,
+      "versionedHash": "blobHash005",
+    },
+    {
+      "commitment": "commitment006",
+      "size": 1500,
+      "versionedHash": "blobHash006",
+    },
+  ],
+  "totalBlobs": 0,
+}
+`;
+
+exports[`Blob router > should get all the blobs 2`] = `
+{
+  "blobs": [
+    {
+      "commitment": "commitment001",
+      "size": 1000,
+      "versionedHash": "blobHash001",
+    },
+    {
+      "commitment": "commitment002",
+      "size": 1100,
+      "versionedHash": "blobHash002",
+    },
+    {
+      "commitment": "commitment003",
+      "size": 1200,
+      "versionedHash": "blobHash003",
+    },
+    {
+      "commitment": "commitment004",
+      "size": 1300,
+      "versionedHash": "blobHash004",
+    },
+    {
+      "commitment": "commitment005",
+      "size": 1400,
+      "versionedHash": "blobHash005",
+    },
+    {
+      "commitment": "commitment006",
+      "size": 1500,
+      "versionedHash": "blobHash006",
+    },
+  ],
+  "totalBlobs": 0,
+}
+`;
+
+exports[`Blob router > should get all the blobs with pagination 1`] = `
+{
+  "blobs": [
+    {
+      "commitment": "commitment003",
+      "size": 1200,
+      "versionedHash": "blobHash003",
+    },
+    {
+      "commitment": "commitment004",
+      "size": 1300,
+      "versionedHash": "blobHash004",
+    },
+  ],
+  "totalBlobs": 0,
+}
+`;

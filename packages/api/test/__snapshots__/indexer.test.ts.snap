@@ -1,0 +1,100 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Indexer router > should index new data if auth 1`] = `
+{
+  "blobAsCalldataGasUsed": 1104n,
+  "blobGasPrice": 1n,
+  "blobGasUsed": 10000n,
+  "excessBlobGas": 5000n,
+  "hash": "blockHash001",
+  "number": 1003,
+  "slot": 103,
+  "timestamp": 2021-08-29T17:12:54.000Z,
+  "transactions": [
+    {
+      "blobs": [
+        {
+          "blob": {
+            "size": 1000,
+          },
+          "blobHash": "blobHash001",
+          "index": 0,
+        },
+      ],
+      "fromId": "address1",
+      "hash": "txHash001",
+      "toId": "address2",
+    },
+    {
+      "blobs": [
+        {
+          "blob": {
+            "size": 1100,
+          },
+          "blobHash": "blobHash002",
+          "index": 0,
+        },
+      ],
+      "fromId": "address3",
+      "hash": "txHash002",
+      "toId": "address4",
+    },
+    {
+      "blobs": [
+        {
+          "blob": {
+            "size": 1200,
+          },
+          "blobHash": "blobHash003",
+          "index": 0,
+        },
+      ],
+      "fromId": "address5",
+      "hash": "txHash003",
+      "toId": "address6",
+    },
+    {
+      "blobs": [
+        {
+          "blob": {
+            "size": 31,
+          },
+          "blobHash": "blobHash008",
+          "index": 0,
+        },
+      ],
+      "fromId": "address1",
+      "hash": "txHash008",
+      "toId": "address3",
+    },
+    {
+      "blobs": [
+        {
+          "blob": {
+            "size": 15,
+          },
+          "blobHash": "blobHash009",
+          "index": 0,
+        },
+      ],
+      "fromId": "address4",
+      "hash": "txHash009",
+      "toId": "address6",
+    },
+    {
+      "blobs": [
+        {
+          "blob": {
+            "size": 23,
+          },
+          "blobHash": "blobHash010",
+          "index": 0,
+        },
+      ],
+      "fromId": "address4",
+      "hash": "txHash010",
+      "toId": "address2",
+    },
+  ],
+}
+`;

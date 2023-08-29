@@ -224,6 +224,16 @@
       "dataReference": "bzz://some-hash-for-blobHash006"
     }
   ],
+  "blobData": [
+    {
+      "id": "blobHash004",
+      "data": "0x009e52b65620a0e81014d78fdbc32ec085799ebe5ffa018c9a3dfaaad55586d0008bf88da3"
+    },
+    {
+      "id": "blobHash005",
+      "data": "0x009e52b65620a0e81014d7ad55586d0008bf88da3"
+    }
+  ],
   "blobsOnTransactions": [
     {
       "blobHash": "blobHash001",

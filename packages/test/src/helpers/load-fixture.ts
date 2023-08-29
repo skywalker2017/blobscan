@@ -13,6 +13,7 @@ export default async () => {
     prisma.blobDataStorageReference.createMany({
       data: fixtures.blobDataStorageRefs,
     }),
+    prisma.blobData.createMany({ data: fixtures.blobData }),
     prisma.blobsOnTransactions.createMany({
       data: fixtures.blobsOnTransactions,
     }),

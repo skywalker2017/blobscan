@@ -15,5 +15,6 @@ export const fixtures = {
   blobs: data.blobs,
   blobDataStorageRefs:
     data.blobDataStorageReferences as BlobDataStorageReferenceFixture[],
+  blobData: data.blobData,
   blobsOnTransactions: data.blobsOnTransactions,
 };
